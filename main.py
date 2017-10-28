@@ -68,17 +68,21 @@ def handle_session_end_request():
         card_title, speech_output, None, should_end_session))
 
 
-def maths_query(intent, session):
+def shape_query(intent, session):
     session_attributes = {}
-
+    shapeList = ['a circle','a triangle','a square','a rectangle','a diamond','a pentagon','a hexagon','a heptagon','an octagon',
+                 'a rhombus,a parallelogram','a kite','a eclipse','a five pointed star']
+    shape_sides = {'a circle':'one','a triangle':'three','a square':'four','a rectangle':'four','a diamond':'four',
+                   'a pentagon':'five','a hexagon':'six','a heptagon':'seven','an octagon':'eight','a rhombus':'four',
+                   'a parallelogram':'four','a kite':'four','ellipse': 'one', 'a five pointed star':'ten'}
     #get 2 random integers between 0 and 10
-    random_int1 = random.randint(1,10)
-    random_int2 = random.randint(1,10)
-    answer = str(random_int1 + random_int2)
+    random_int = random.randint(0,14)
+
+    answer = shape_sides[shapeList[random_int]]
     session_attributes['answer'] = answer
 
     #build question adding them together
-    speech_output = "What is " + str(random_int1) + " plus " + str(random_int2) + "?"
+    speech_output = "How many sides does " + shapeList[random_int] + "have?"
 
     reprompt_text = "howdy"
     should_end_session = False
@@ -134,9 +138,9 @@ def on_intent(intent_request, session):
     intent_name = intent_request['intent']['name']
 
     # Dispatch to your skill's intent handlers
-    if intent_name == "StartMathsGame":
-        #start maths game
-        return maths_query(intent, session)
+    if intent_name == "StartShapeGame":
+        #start Shape game
+        return Shape_query(intent, session)
     elif intent_name == "GetAnswerToPreviousQuestion":
         return get_answer(intent, session)
     elif intent_name == "AMAZON.CancelIntent" or intent_name == "AMAZON.StopIntent":
