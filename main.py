@@ -69,27 +69,59 @@ def handle_session_end_request():
 
 
 def maths_query(intent, session):
-    session_attributes = {}
+    session_attributes = session['attributes']
 
-    #get 2 random integers between 0 and 10
-    random_int1 = random.randint(1,10)
-    operator = "plus"
-    random_int2 = random.randint(-10,10)
-    if random_int2 < 0:
-        operator = "minus"
-        speech_output = "What is " + str(random_int1) + " " + operator + " " + str(-1 * random_int2) + "?"
+    if "chosenDifficulty" not in session_attributes:
+        session_attributes["chosenDifficulty"] = 'medium'
+
+    
+    #set difficulty boundaries
+    if session_attributes["chosenDifficulty"] == 'medium':
+        random_int1 = random.randint(1, 20)
+        random_int2 = random.randint(1, 10)
+        random_int3 = random.randint(0, 2)
+        potential_operators = [" plus "," minus "," times "]
+
+        chosenOperator = potential_operators[random_int3]
+        if chosenOperator == " plus ":
+            if random_int2 < 0:
+                chosenOperator = " minus "
+            answer = random_int1 + random_int2
+        elif chosenOperator == " minus ":
+            if random_int2 < 0:
+                chosenOperator = " plus "
+            answer = random_int1 - random_int2
+        elif chosenOperator == " times ":
+            answer = (random_int1*random_int2)
+
+    elif session_attributes["chosenDifficulty"] == 'hard':
+        random_int1 = random.randint(10, 30)
+        random_int2 = random.randint(-30, 30)
+        chosenOperator = " times "
+        answer = random_int1 * random_int2
+
     else:
-        speech_output = "What is " + str(random_int1) + " " + operator + " " + str(random_int2) + "?"
-    answer = random_int1 + random_int2
+        random_int1 = random.randint(1, 10)
+        random_int2 = random.randint(1, 10)
+        potential_operators = [" plus ", " minus "]
+        functionDecider = random.randint(0, 1)
+        chosenOperator = potential_operators[functionDecider]
+        if chosenOperator == " plus ":
+            answer = random_int1 + random_int2
+        elif chosenOperator == " minus ":
+            answer = random_int1 - random_int2
+
+
+    if random_int2 < 0 and chosenOperator != " times ":
+        speech_output = "What is " + str(random_int1) + " " + chosenOperator + " " + str(-1 * random_int2) + "?"
+    else:
+        speech_output = "What is " + str(random_int1) + " " + chosenOperator + " " + str(random_int2) + "?"
+
 
     if answer < 0:
         session_attributes['answer'] = "Minus " + str(-1*answer)
     else:
         session_attributes['answer'] = str(answer)
-
-    #build question adding them together
-
-
 
     reprompt_text = "howdy"
     should_end_session = False
@@ -112,12 +144,18 @@ def get_answer(intent, session):
     return build_response(session_attributes, build_speechlet_response(
         intent['name'], speech_output, reprompt_text, should_end_session))
 
+#Method for setting difficulty of all Qs
 def set_difficulty(intent, session):
     session_attributes = session['attributes']
     should_end_session = False
-    if 'Difficulty' in intent['Slots']:
-        selected_difficulty = intent['slots']['Difficulty']['value']
-        speech_output = "Your selected difficulty is " + 
+    selected_difficulty = intent['slots']['Difficulty']['value']
+    session_attributes['chosenDifficulty'] = selected_difficulty
+    speech_output = "Your selected difficulty is " + selected_difficulty
+    #todo: validate input
+    """else:
+        speech_output = "This is not a valid difficulty. Your difficulty is " + session_attributes['chosenDifficulty']"""
+
+    reprompt_text = "howdy pardner"
 
     return build_response(session_attributes, build_speechlet_response(
             intent['name'], speech_output, reprompt_text, should_end_session))
@@ -158,7 +196,7 @@ def on_intent(intent_request, session):
         return maths_query(intent, session)
     elif intent_name == "GetAnswerToPreviousQuestionIntent":
         return get_answer(intent, session)
-    elif intent_name == "SetDifficultyIntent0":
+    elif intent_name == "SetDifficultyIntent":
         return set_difficulty(intent, session)
     elif intent_name == "AMAZON.CancelIntent" or intent_name == "AMAZON.StopIntent":
         return handle_session_end_request()
@@ -190,9 +228,6 @@ def lambda_handler(event, context):
     prevent someone else from configuring a skill that sends requests to this
     function.
     """
-    # if (event['session']['application']['applicationId'] !=
-    #         "amzn1.echo-sdk-ams.app.[unique-value-here]"):
-    #     raise ValueError("Invalid Application ID")
 
     if event['session']['new']:
         on_session_started({'requestId': event['request']['requestId']},
