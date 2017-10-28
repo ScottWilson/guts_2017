@@ -73,12 +73,23 @@ def maths_query(intent, session):
 
     #get 2 random integers between 0 and 10
     random_int1 = random.randint(1,10)
-    random_int2 = random.randint(1,10)
-    answer = str(random_int1 + random_int2)
-    session_attributes['answer'] = answer
+    operator = "plus"
+    random_int2 = random.randint(-10,10)
+    if random_int2 < 0:
+        operator = "minus"
+        speech_output = "What is " + str(random_int1) + " " + operator + " " + str(-1 * random_int2) + "?"
+    else:
+        speech_output = "What is " + str(random_int1) + " " + operator + " " + str(random_int2) + "?"
+    answer = random_int1 + random_int2
+
+    if answer < 0:
+        session_attributes['answer'] = "Minus " + str(-1*answer)
+    else:
+        session_attributes['answer'] = str(answer)
 
     #build question adding them together
-    speech_output = "What is " + str(random_int1) + " plus " + str(random_int2) + "?"
+
+
 
     reprompt_text = "howdy"
     should_end_session = False
@@ -90,19 +101,27 @@ def maths_query(intent, session):
         intent['name'], speech_output, reprompt_text, should_end_session))
 
 def get_answer(intent, session):
-    #session_attributes = session['sessionAttributes']
-    """
-    if "answer" in session_attributes:
-        speech_output = "The answer was " + session_attributes['answer']
-    else:
-        speech_output = "You have not answered a question yet. Please ask for one now."
-    """
+
     session_attributes = session['attributes']
-    speech_output = "The answer is: " + session_attributes["answer"]
+    if "answer" in session_attributes:
+        speech_output = "The answer is: " + session_attributes["answer"]
+    else:
+        speech_output = "You have not answered any questions yet. Please ask for a question."
     reprompt_text = "howdy"
     should_end_session = False
     return build_response(session_attributes, build_speechlet_response(
         intent['name'], speech_output, reprompt_text, should_end_session))
+
+def set_difficulty(intent, session):
+    session_attributes = session['attributes']
+    should_end_session = False
+    if 'Difficulty' in intent['Slots']:
+        selected_difficulty = intent['slots']['Difficulty']['value']
+        speech_output = "Your selected difficulty is " + 
+
+    return build_response(session_attributes, build_speechlet_response(
+            intent['name'], speech_output, reprompt_text, should_end_session))
+
 
 # --------------- Events ------------------
 
@@ -134,11 +153,13 @@ def on_intent(intent_request, session):
     intent_name = intent_request['intent']['name']
 
     # Dispatch to your skill's intent handlers
-    if intent_name == "StartMathsGame":
+    if intent_name == "MathsQuestionIntent":
         #start maths game
         return maths_query(intent, session)
-    elif intent_name == "GetAnswerToPreviousQuestion":
+    elif intent_name == "GetAnswerToPreviousQuestionIntent":
         return get_answer(intent, session)
+    elif intent_name == "SetDifficultyIntent0":
+        return set_difficulty(intent, session)
     elif intent_name == "AMAZON.CancelIntent" or intent_name == "AMAZON.StopIntent":
         return handle_session_end_request()
     else:
