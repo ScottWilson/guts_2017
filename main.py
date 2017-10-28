@@ -50,13 +50,10 @@ def get_welcome_response():
 
     session_attributes = {}
     card_title = "Welcome"
-    speech_output = "Welcome to the Alexa Skills Kit sample. " \
-                    "Please tell me your favorite color by saying, " \
-                    "my favorite color is red"
+    speech_output = "Welcome to our Alexa Skills kit. Please ask to start the maths quiz. " \
     # If the user either does not reply to the welcome message or says something
     # that is not understood, they will be prompted again with this text.
-    reprompt_text = "Please tell me your favorite color by saying, " \
-                    "my favorite color is red."
+    reprompt_text = "Please ask me quiz you."
     should_end_session = False
     return build_response(session_attributes, build_speechlet_response(
         card_title, speech_output, reprompt_text, should_end_session))
@@ -64,17 +61,26 @@ def get_welcome_response():
 
 def handle_session_end_request():
     card_title = "Session Ended"
-    speech_output = "Thank you for trying the Alexa Skills Kit sample. " \
-                    "Have a nice day! "
+    speech_output = "Thank you for trying our Alexa Skills Kit! "
     # Setting this to true ends the session and exits the skill.
     should_end_session = True
     return build_response({}, build_speechlet_response(
         card_title, speech_output, None, should_end_session))
 
-def motivational_message(intent, session):
+
+def maths_query(intent, session):
     session_attributes = {}
-    reprompt_text = "Ask me to motivate you again"
-    speech_output = random.choice (["I, a super-smart AI, know you can do it","I've calculated you can do it","Do or do not, there is py(thon)","I would bet my developer's laptop on the fact you can do this", "ANOTHA WUN", "Losing is for losers. You are not a loser."])
+
+    #get 2 random integers between 0 and 10
+    random_int1 = random.randint(1,10)
+    random_int2 = random.randint(1,10)
+    answer = str(random_int1 + random_int2)
+    session_attributes['answer'] = answer
+
+    #build question adding them together
+    speech_output = "What is " + str(random_int1) + " plus " + str(random_int2) + "?"
+
+    reprompt_text = "howdy"
     should_end_session = False
 
     # Setting reprompt_text to None signifies that we do not want to reprompt
@@ -83,6 +89,20 @@ def motivational_message(intent, session):
     return build_response(session_attributes, build_speechlet_response(
         intent['name'], speech_output, reprompt_text, should_end_session))
 
+def get_answer(intent, session):
+    #session_attributes = session['sessionAttributes']
+    """
+    if "answer" in session_attributes:
+        speech_output = "The answer was " + session_attributes['answer']
+    else:
+        speech_output = "You have not answered a question yet. Please ask for one now."
+    """
+    session_attributes = session['attributes']
+    speech_output = "The answer is: " + session_attributes["answer"]
+    reprompt_text = "howdy"
+    should_end_session = False
+    return build_response(session_attributes, build_speechlet_response(
+        intent['name'], speech_output, reprompt_text, should_end_session))
 
 # --------------- Events ------------------
 
@@ -114,13 +134,11 @@ def on_intent(intent_request, session):
     intent_name = intent_request['intent']['name']
 
     # Dispatch to your skill's intent handlers
-    if intent_name == "MyColorIsIntent":
-        return set_color_in_session(intent, session)
-    elif intent_name == "MyMotivationIsIntent":
-        return motivational_message(intent, session)
-        #return get_color_from_session(intent, session)
-    elif intent_name == "AMAZON.HelpIntent":
-        return get_welcome_response()
+    if intent_name == "StartMathsGame":
+        #start maths game
+        return maths_query(intent, session)
+    elif intent_name == "GetAnswerToPreviousQuestion":
+        return get_answer(intent, session)
     elif intent_name == "AMAZON.CancelIntent" or intent_name == "AMAZON.StopIntent":
         return handle_session_end_request()
     else:
