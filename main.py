@@ -52,7 +52,7 @@ def get_welcome_response():
 
     session_attributes = {}
     card_title = "Welcome"
-    speech_output = "Welcome to our Alexa Skills kit. Please ask to start the maths quiz. " \
+    speech_output = "Welcome to our Alexa Skills kit. Please ask to start a quiz (either maths or shapes). " \
         # If the user either does not reply to the welcome message or says something
     # that is not understood, they will be prompted again with this text.
     reprompt_text = "Please ask me quiz you."
@@ -114,17 +114,26 @@ def maths_query(session):
     else:
         question_string = "What is " + str(random_int1) + " " + chosenOperator + " " + str(random_int2) + "?"
 
-    if answer < 0:
+    """if answer < 0:
         answer_string = "Minus " + str(-1 * answer)
     else:
-        answer_string = str(answer)
+        answer_string = str(answer)"""
+    answer_string = str(answer)
 
     return question_string, answer_string
 
 
 def get_answer(intent, session):
     session_attributes = session['attributes']
-    if "answer" in session_attributes:
+
+    if 'quizStarted' in session_attributes and not session_attributes['quizStarted']:
+        speech_output = "Please start a quiz. You can do this by saying start a maths quiz or start a shapes quiz"
+        should_end_session = False
+        reprompt_text = "Please start a quiz. You can do this by saying start a maths quiz or start a shapes quiz"
+        return build_response(session_attributes, build_speechlet_response(
+            intent['name'], speech_output, reprompt_text, should_end_session))
+
+    if "current_answer" in session_attributes:
         speech_output = "The answer is: " + session_attributes["current_answer"]
         reprompt_text = "The answer is: " + session_attributes["current_answer"]
     else:
@@ -134,6 +143,19 @@ def get_answer(intent, session):
     should_end_session = False
     return build_response(session_attributes, build_speechlet_response(
         intent['name'], speech_output, reprompt_text, should_end_session))
+
+def letter_checker_query(session):
+    possible_words = ['elephant', 'apple', 'animal', 'orange', 'penguin', 'carrot', 'moon', 'computer',
+                      'chair', 'dog', 'bat', 'light', 'bottle', 'table', 'box']
+
+
+    random_int = random.randint(0, 14)
+    chosen_word = possible_words[random_int]
+
+    question_text = 'Which letter does the word ' + chosen_word + ' start with?'
+    answer_text = chosen_word[0]
+    return question_text, answer_text
+
 
 
 # Method for setting difficulty of all Qs
@@ -155,39 +177,28 @@ def set_difficulty(intent, session):
     # used for building quizzes initially, next question is navigate to the next one
 
 
-def start_maths_quiz(intent, session):
-    # todo: get input validation for the commands that are valid at this point
-    session['attributes'] = {}
-
-
-    session['attributes']["number_of_questions"] = 10
-    session['attributes']["chosenDifficulty"] = 'medium'
-    question_list = [""] * session['attributes']["number_of_questions"]
-    answer_list = [""] * session['attributes']["number_of_questions"]
-    i = 0
-
-    while i < session['attributes']["number_of_questions"]:
-        question_list[i], answer_list[i] = maths_query(session)
-        i = i + 1
-    # add lists to session attributes and initialise a counter
-        session['attributes']['question_list'], session['attributes']['answer_list'] = question_list, answer_list
-        session['attributes']['question_counter'] = 0
-
-    speech_output = "Welcome to the maths Quiz! Please say 'next' to get onto your first question"
-    reprompt_text = "Please say 'next' to get onto your first question"
-    should_end_session = False
-    return build_response(session['attributes'], build_speechlet_response(
-        intent['name'], speech_output, reprompt_text, should_end_session))
-
 
 def next_question(intent, session):
     # get counter and other relevant info for the question
+
     session_attributes = session['attributes']
+    if 'quizStarted' not in session_attributes or not session_attributes['quizStarted']:
+        speech_output = "Please start a quiz. You can do this by saying start a maths quiz or start a shapes quiz"
+        should_end_session = False
+        reprompt_text = "Please start a quiz. You can do this by saying start a maths quiz or start a shapes quiz"
+        return build_response(session_attributes, build_speechlet_response(
+            intent['name'], speech_output, reprompt_text, should_end_session))
+
     main_counter = session_attributes['question_counter']
-    if session_attributes == session_attributes["number_of_questions"]:
+    #quit out at end of quiz
+    if main_counter == session_attributes["number_of_questions"]:
+        speech_output = "That's the end of the quiz! Thanks for playing!"
+        reprompt_text = "That's the end of the quiz! Thanks for playing!"
         should_end_session = True
-        return
-        # quittttt
+        session['quizStarted'] = False
+        return build_response(session_attributes, build_speechlet_response(
+        intent['name'], speech_output, reprompt_text, should_end_session))
+
 
     session_attributes['current_question'] = session_attributes['question_list'][main_counter]
     session_attributes['current_answer'] = session_attributes['answer_list'][main_counter]
@@ -199,6 +210,79 @@ def next_question(intent, session):
     session_attributes['question_counter'] += 1
     return build_response(session_attributes, build_speechlet_response(
         intent['name'], speech_output, reprompt_text, should_end_session))
+
+
+
+def start_quiz(intent, session, type_of_quiz):
+    # todo: get input validation for the commands that are valid at this point
+    session['attributes'] = {}
+    session['attributes']['quizStarted'] = True
+    session['attributes']["number_of_questions"] = 10
+    session['attributes']["chosenDifficulty"] = 'medium'
+    question_list = [""] * session['attributes']["number_of_questions"]
+    answer_list = [""] * session['attributes']["number_of_questions"]
+    i = 0
+
+    if type_of_quiz == "shapes":
+        while i < session['attributes']["number_of_questions"]:
+            question_list[i], answer_list[i] = shape_query(session)
+            i = i + 1
+        # add lists to session attributes and initialise a counter
+        speech_output = "Welcome to the shapes Quiz! Please say 'next' to get onto your first question"
+    elif type_of_quiz == "maths":
+        speech_output = "Welcome to the maths Quiz! Please say 'next' to get onto your first question"
+        while i < session['attributes']["number_of_questions"]:
+            question_list[i], answer_list[i] = maths_query(session)
+            i = i + 1
+    elif type_of_quiz == "letters":
+        speech_output = "Welcome to the letters Quiz! Please say 'next' to get onto your first question"
+        while i < session['attributes']["number_of_questions"]:
+            question_list[i], answer_list[i] = letter_checker_query(session)
+            i = i + 1
+    elif type_of_quiz == 'noises':
+        speech_output = "Welcome to the noises Quiz! Please say 'next' to get onto your first question"
+        while i < session['attributes']["number_of_questions"]:
+            question_list[i], answer_list[i] = animal_noises_query(session)
+            i = i + 1
+
+    # add lists to session attributes and initialise a counter
+    session['attributes']['question_list'], session['attributes']['answer_list'] = question_list, answer_list
+    session['attributes']['question_counter'] = 0
+
+
+    reprompt_text = "Please say 'next' to get onto your first question"
+    should_end_session = False
+
+    return build_response(session['attributes'], build_speechlet_response(
+        intent['name'], speech_output, reprompt_text, should_end_session))
+
+#questions for shape quiz
+def shape_query(session):
+    shapeList = ['a circle','a triangle','a square','a rectangle','a diamond','a pentagon','a hexagon','a heptagon',
+                 'an octagon', 'a rhombus','a parallelogram','a kite','a eclipse','a five pointed star']
+    shape_sides = ['one', 'three', 'four', 'four', 'four', 'five', 'six', 'seven', 'eight', 'four', 'four', 'four',
+                   'one', 'ten']
+
+    random_int = random.randint(0, 13)
+    chosen_shape = shapeList[random_int]
+    chosen_answer = shape_sides[random_int]
+
+    question_text = "How many sides does " + chosen_shape + " have?"
+    answer_text = chosen_answer
+    return question_text, answer_text
+
+
+def animal_noises_query(session):
+    animal_list = ["cow", "sheep", 'chicken', 'dog', 'cat', 'rooster', 'duck', 'pig', 'horse', 'donkey']
+    animal_noises = ['moo', 'baa', 'cluck', 'bark', 'cat', 'cock-a-doodle-doo', 'quack', 'oink', 'hee-haw']
+
+    random_int = random.randint(0, 9)
+    chosen_animal = animal_list[random_int]
+    chosen_noise = animal_noises[random_int]
+
+    answer_text = chosen_noise
+    question_text = "What noise does a " + chosen_animal + " make?"
+    return question_text, answer_text
 
 
 # --------------- Events ------------------
@@ -234,9 +318,15 @@ def on_intent(intent_request, session):
     if intent_name == "GetAnswerToPreviousQuestionIntent":
         return get_answer(intent, session)
     elif intent_name == "MakeMathsQuizIntent":
-        return start_maths_quiz(intent, session)
+        return start_quiz(intent, session, "maths")
     elif intent_name == "MoveOntoNextQuestion":
         return next_question(intent, session)
+    elif intent_name == "MakeShapesQuizIntent":
+        return start_quiz(intent, session, "shapes")
+    elif intent_name == "MakeLettersQuizIntent":
+        return start_quiz(intent, session, "letters")
+    elif intent_name == "MakeNoisesQuizIntent":
+        return start_quiz(intent, session, 'noises')
     elif intent_name == "SetDifficultyIntent":
         return set_difficulty(intent, session)
     elif intent_name == "AMAZON.CancelIntent" or intent_name == "AMAZON.StopIntent":
